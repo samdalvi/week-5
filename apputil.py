@@ -14,18 +14,21 @@ def survival_demographics() -> pd.DataFrame:
     # Create all possible combinations to ensure empty groups are included
     from itertools import product
     all_combinations = list(product([1, 2, 3], ['male', 'female'], age_labels))
-    all_combinations_df = pd.DataFrame(all_combinations, columns=['Pclass', 'Sex', 'age_group'])
+    all_combinations_df = pd.DataFrame(all_combinations, columns=['pclass', 'sex', 'age_group'])
     all_combinations_df['age_group'] = pd.Categorical(all_combinations_df['age_group'], categories=age_labels, ordered=True)
     
+    # Rename columns to lowercase for consistency
+    df = df.rename(columns={'Pclass': 'pclass', 'Sex': 'sex', 'PassengerId': 'passengerid', 'Survived': 'survived'})
+    
     # Group and aggregate
-    grouped = df.groupby(['Pclass', 'Sex', 'age_group'], observed=False)
+    grouped = df.groupby(['pclass', 'sex', 'age_group'], observed=False)
     result = grouped.agg(
-        n_passengers=('PassengerId', 'count'),
-        n_survivors=('Survived', 'sum')
+        n_passengers=('passengerid', 'count'),
+        n_survivors=('survived', 'sum')
     ).reset_index()
     
     # Merge to ensure all combinations are present
-    result = all_combinations_df.merge(result, on=['Pclass', 'Sex', 'age_group'], how='left')
+    result = all_combinations_df.merge(result, on=['pclass', 'sex', 'age_group'], how='left')
     result['n_passengers'] = result['n_passengers'].fillna(0).astype(int)
     result['n_survivors'] = result['n_survivors'].fillna(0).astype(int)
     
@@ -39,7 +42,7 @@ def survival_demographics() -> pd.DataFrame:
     # Ensure age_group is categorical
     result['age_group'] = pd.Categorical(result['age_group'], categories=age_labels, ordered=True)
     
-    result = result.sort_values(['Pclass', 'Sex', 'age_group'])
+    result = result.sort_values(['pclass', 'sex', 'age_group'])
     return result
 
 
@@ -67,8 +70,9 @@ def last_names() -> pd.Series:
     return df['last_name'].value_counts()
 
 
-def determine_age_division(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+def determine_age_division() -> pd.DataFrame:
+    # Load the Titanic dataset
+    df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     # Calculate median age for each Pclass
     median_ages = df.groupby('Pclass')['Age'].transform('median')
     # Create boolean column indicating if passenger is older than their class median
@@ -78,7 +82,7 @@ def determine_age_division(df: pd.DataFrame) -> pd.DataFrame:
 
 def visualize_demographic():
     df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
-    data = survival_demographics(df)
+    data = survival_demographics()
     
     # Filter out rows with NaN survival rates for visualization
     data_viz = data[data['survival_rate'].notna()].copy()
@@ -87,14 +91,14 @@ def visualize_demographic():
         data_viz,
         x='age_group',
         y='survival_rate',
-        color='Sex',
-        facet_col='Pclass',
+        color='sex',
+        facet_col='pclass',
         title='Survival Rates by Class, Sex, and Age Group<br><sub>Did women and children in first class survive at higher rates?</sub>',
         labels={
             'survival_rate': 'Survival Rate',
             'age_group': 'Age Group',
-            'Pclass': 'Passenger Class',
-            'Sex': 'Gender'
+            'pclass': 'Passenger Class',
+            'sex': 'Gender'
         },
         color_discrete_map={'male': '#636EFA', 'female': '#EF553B'},
         barmode='group',
