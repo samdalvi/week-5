@@ -7,13 +7,37 @@ def survival_demographics(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     age_bins = [0, 12, 19, 59, float('inf')]
     age_labels = ['Child', 'Teen', 'Adult', 'Senior']
+    # Create age_group as a Categorical dtype with observed=False to include all categories
     df['age_group'] = pd.cut(df['Age'], bins=age_bins, labels=age_labels, include_lowest=True)
-    grouped = df.groupby(['Pclass', 'Sex', 'age_group'], observed=True)
+    
+    # Create all possible combinations to ensure empty groups are included
+    from itertools import product
+    all_combinations = list(product([1, 2, 3], ['male', 'female'], age_labels))
+    all_combinations_df = pd.DataFrame(all_combinations, columns=['Pclass', 'Sex', 'age_group'])
+    all_combinations_df['age_group'] = pd.Categorical(all_combinations_df['age_group'], categories=age_labels, ordered=True)
+    
+    # Group and aggregate
+    grouped = df.groupby(['Pclass', 'Sex', 'age_group'], observed=False)
     result = grouped.agg(
         n_passengers=('PassengerId', 'count'),
         n_survivors=('Survived', 'sum')
     ).reset_index()
-    result['survival_rate'] = result['n_survivors'] / result['n_passengers']
+    
+    # Merge to ensure all combinations are present
+    result = all_combinations_df.merge(result, on=['Pclass', 'Sex', 'age_group'], how='left')
+    result['n_passengers'] = result['n_passengers'].fillna(0).astype(int)
+    result['n_survivors'] = result['n_survivors'].fillna(0).astype(int)
+    
+    # Calculate survival rate, handle division by zero
+    result['survival_rate'] = np.where(
+        result['n_passengers'] > 0,
+        result['n_survivors'] / result['n_passengers'],
+        np.nan
+    )
+    
+    # Ensure age_group is categorical
+    result['age_group'] = pd.Categorical(result['age_group'], categories=age_labels, ordered=True)
+    
     result = result.sort_values(['Pclass', 'Sex', 'age_group'])
     return result
 
@@ -34,13 +58,17 @@ def family_groups(df: pd.DataFrame) -> pd.DataFrame:
 
 def last_names(df: pd.DataFrame) -> pd.Series:
     df = df.copy()
+    # Extract last name (everything before the comma)
     df['last_name'] = df['Name'].str.split(',').str[0].str.strip()
+    # Return value counts as a Series
     return df['last_name'].value_counts()
 
 
 def determine_age_division(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    # Calculate median age for each Pclass
     median_ages = df.groupby('Pclass')['Age'].transform('median')
+    # Create boolean column indicating if passenger is older than their class median
     df['older_passenger'] = df['Age'] > median_ages
     return df
 
@@ -48,9 +76,12 @@ def determine_age_division(df: pd.DataFrame) -> pd.DataFrame:
 def visualize_demographic():
     df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     data = survival_demographics(df)
+    
+    # Filter out rows with NaN survival rates for visualization
+    data_viz = data[data['survival_rate'].notna()].copy()
 
     fig = px.bar(
-        data,
+        data_viz,
         x='age_group',
         y='survival_rate',
         color='Sex',
@@ -64,7 +95,7 @@ def visualize_demographic():
         },
         color_discrete_map={'male': '#636EFA', 'female': '#EF553B'},
         barmode='group',
-        height=700  # bigger
+        height=700
     )
 
     fig.update_layout(
@@ -99,7 +130,7 @@ def visualize_families():
         color_continuous_scale='Viridis',
         hover_data=['min_fare', 'max_fare'],
         size_max=50,
-        height=700  # bigger
+        height=700
     )
 
     for pclass in sorted(data['Pclass'].unique()):
@@ -163,7 +194,7 @@ def visualize_family_size():
         title='Survival Rates by Family Size and Passenger Class<br><sub>How did traveling alone vs. with family affect survival chances?</sub>',
         xaxis_title='Passenger Class',
         yaxis_title='Family Size Category',
-        height=700,  # bigger
+        height=700,
         xaxis={'side': 'top'},
         font=dict(size=14),
         margin=dict(l=40, r=30, t=100, b=40)
