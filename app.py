@@ -124,6 +124,6 @@ with mid:
         '''
     )
 
-    # This one is compatible as-is in apputil.py
+
     fig3 = visualize_family_size()
     st.plotly_chart(fig3, use_container_width=True)
