@@ -82,7 +82,7 @@ def determine_age_division() -> pd.DataFrame:
 
 def visualize_demographic():
     df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
-    data = survival_demographics()
+    data = survival_demographics(df)
     
     # Filter out rows with NaN survival rates for visualization
     data_viz = data[data['survival_rate'].notna()].copy()
@@ -91,14 +91,14 @@ def visualize_demographic():
         data_viz,
         x='age_group',
         y='survival_rate',
-        color='sex',
-        facet_col='pclass',
+        color='Sex',
+        facet_col='Pclass',
         title='Survival Rates by Class, Sex, and Age Group<br><sub>Did women and children in first class survive at higher rates?</sub>',
         labels={
             'survival_rate': 'Survival Rate',
             'age_group': 'Age Group',
-            'pclass': 'Passenger Class',
-            'sex': 'Gender'
+            'Pclass': 'Passenger Class',
+            'Sex': 'Gender'
         },
         color_discrete_map={'male': '#636EFA', 'female': '#EF553B'},
         barmode='group',
