@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-def survival_demographics(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+def survival_demographics() -> pd.DataFrame:
+    # Load the Titanic dataset
+    df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     age_bins = [0, 12, 19, 59, float('inf')]
     age_labels = ['Child', 'Teen', 'Adult', 'Senior']
     # Create age_group as a Categorical dtype with observed=False to include all categories
@@ -42,8 +43,9 @@ def survival_demographics(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def family_groups(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+def family_groups() -> pd.DataFrame:
+    # Load the Titanic dataset
+    df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     df['family_size'] = df['SibSp'] + df['Parch'] + 1
     grouped = df.groupby(['family_size', 'Pclass'])
     result = grouped.agg(
@@ -56,8 +58,9 @@ def family_groups(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def last_names(df: pd.DataFrame) -> pd.Series:
-    df = df.copy()
+def last_names() -> pd.Series:
+    # Load the Titanic dataset
+    df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     # Extract last name (everything before the comma)
     df['last_name'] = df['Name'].str.split(',').str[0].str.strip()
     # Return value counts as a Series
